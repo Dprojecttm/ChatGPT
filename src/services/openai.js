@@ -52,18 +52,29 @@ export async function generateTextStream({
   }
 
   try {
+    const isReasoningModel =
+      model.startsWith('o1') ||
+      model.startsWith('o3') ||
+      model.includes('reasoning') ||
+      model === 'deepseek-r1';
+
+    const requestBody = {
+      model: model,
+      messages: messages,
+      stream: true,
+    };
+
+    if (!isReasoningModel) {
+      requestBody.temperature = temperature;
+    }
+
     const response = await fetch(`${baseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify({
-        model: model,
-        messages: messages,
-        temperature: temperature,
-        stream: true,
-      }),
+      body: JSON.stringify(requestBody),
       signal: signal,
     });
 
