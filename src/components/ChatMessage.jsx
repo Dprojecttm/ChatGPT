@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { Copy, Check, Download, ExternalLink, Bot, User, Sparkles } from 'lucide-react';
+import { Copy, Check, Download, Bot, User, Sparkles, Image as ImageIcon, FileText } from 'lucide-react';
 
-export default function ChatMessage({ message }) {
+export default function ChatMessage({ message, onGenerateImageClick }) {
   const isUser = message.role === 'user';
   const [copied, setCopied] = useState(false);
 
@@ -31,7 +31,30 @@ export default function ChatMessage({ message }) {
         )}
 
         {isUser ? (
-          <div style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
+          <div>
+            {/* User Attached Files/Images */}
+            {message.attachments && message.attachments.length > 0 && (
+              <div className="user-attachments-grid" style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '8px' }}>
+                {message.attachments.map((att) => (
+                  <div key={att.id || att.name} className="user-attachment-item">
+                    {att.type === 'image' || att.url ? (
+                      <img
+                        src={att.url}
+                        alt={att.name}
+                        style={{ maxWidth: '240px', maxHeight: '180px', borderRadius: '12px', objectFit: 'cover', border: '1px solid var(--border-color)' }}
+                      />
+                    ) : (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-hover)', padding: '6px 12px', borderRadius: '8px', fontSize: '0.85rem' }}>
+                        <FileText size={14} color="var(--accent-color)" />
+                        <span>{att.name}</span>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{ whiteSpace: 'pre-wrap' }}>{message.content}</div>
+          </div>
         ) : (
           <div className="markdown-body">
             <ReactMarkdown
@@ -81,22 +104,75 @@ export default function ChatMessage({ message }) {
               {message.content}
             </ReactMarkdown>
 
-            {/* If message contains a DALL-E generated image */}
+            {/* Quick DALL-E Image Generation Button if prompt asked for an image */}
+            {message.canGenerateImage && onGenerateImageClick && (
+              <div style={{ marginTop: '12px' }}>
+                <button
+                  onClick={() => onGenerateImageClick(message.userPrompt)}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    background: 'linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)',
+                    color: '#fff',
+                    border: 'none',
+                    padding: '8px 16px',
+                    borderRadius: '999px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 10px rgba(236,72,153,0.3)',
+                    transition: 'transform 0.2s ease',
+                  }}
+                  onMouseOver={(e) => e.currentTarget.style.transform = 'scale(1.03)'}
+                  onMouseOut={(e) => e.currentTarget.style.transform = 'scale(1)'}
+                >
+                  <ImageIcon size={16} />
+                  <span>🎨 DALL-E 3 দিয়ে ছবি তৈরি করুন</span>
+                </button>
+              </div>
+            )}
+
+            {/* If message contains a generated image */}
             {message.imageUrl && (
-              <div className="generated-image-card">
-                <img src={message.imageUrl} alt={message.imagePrompt || 'Generated AI Image'} />
-                <div className="generated-image-footer">
-                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '300px' }}>
-                    🎨 DALL-E 3: {message.imagePrompt}
+              <div className="generated-image-card" style={{ marginTop: '12px' }}>
+                <img
+                  src={message.imageUrl}
+                  alt={message.imagePrompt || 'Generated AI Image'}
+                  style={{ width: '100%', maxWidth: '512px', borderRadius: '16px', border: '1px solid var(--border-color)', display: 'block' }}
+                />
+                <div
+                  className="generated-image-footer"
+                  style={{
+                    display: 'flex',
+                    justify: 'space-between',
+                    alignItems: 'center',
+                    marginTop: '8px',
+                    fontSize: '0.82rem',
+                    color: 'var(--text-secondary)',
+                  }}
+                >
+                  <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '340px' }}>
+                    🎨 Prompt: "{message.imagePrompt}"
                   </span>
                   <a
                     href={message.imageUrl}
                     target="_blank"
                     rel="noreferrer"
                     download="dall-e-image.png"
-                    style={{ color: 'var(--accent-color)', display: 'flex', alignItems: 'center', gap: '4px', textDecoration: 'none' }}
+                    style={{
+                      color: 'var(--accent-color)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      textDecoration: 'none',
+                      fontWeight: 600,
+                      background: 'var(--bg-hover)',
+                      padding: '4px 10px',
+                      borderRadius: '8px',
+                    }}
                   >
-                    <Download size={14} /> Save
+                    <Download size={14} /> Download
                   </a>
                 </div>
               </div>

@@ -32,7 +32,12 @@ export async function generateTextStream({
 
   if (!apiKey) {
     // Provide a helpful simulated demo response if no key is entered yet
-    let demoText = `⚠️ **OpenAI API Key সেট করা হয়নি!**\n\nউপরে থাকা **Settings (⚙️)** বাটন অথবা চ্যাট বক্সের পাশের কী আইকনে ক্লিক করে আপনার **OpenAI API Key** প্রবেশ করান।\n\n**ডেমো রেসপন্স:**\nআপনি বলছেন: "${messages[messages.length - 1]?.content || ''}"\n\nAPI Key যুক্ত করলে সরাসরি **${model}** এবং **DALL-E 3** কাজ করবে!`;
+    const lastUserMsg = messages[messages.length - 1];
+    let userPromptText = typeof lastUserMsg?.content === 'string' 
+      ? lastUserMsg.content 
+      : (Array.isArray(lastUserMsg?.content) ? lastUserMsg.content.find(c => c.type === 'text')?.text : '');
+
+    let demoText = `⚠️ **OpenAI API Key সেট করা হয়নি!**\n\nউপরে থাকা **Settings (⚙️)** বাটনে ক্লিক করে আপনার **OpenAI API Key** প্রবেশ করান।\n\n**ডেমো উত্তর:**\nআপনার প্রশ্ন: "${userPromptText || ''}"\n\n(API Key বসালে সরাসরি **${model}** এবং **DALL-E 3** কাজ করবে!)`;
     
     let words = demoText.split(' ');
     let current = '';
@@ -40,7 +45,7 @@ export async function generateTextStream({
       if (signal?.aborted) return;
       current += (i === 0 ? '' : ' ') + words[i];
       onChunk(current);
-      await new Promise((r) => setTimeout(r, 40));
+      await new Promise((r) => setTimeout(r, 30));
     }
     if (onFinish) onFinish(current);
     return;
@@ -117,11 +122,14 @@ export async function generateImage({ prompt, size = '1024x1024', style = 'vivid
   const baseUrl = getApiBaseUrl();
 
   if (!apiKey) {
-    // Return a dummy generated image placeholder if no API key set
-    await new Promise((r) => setTimeout(r, 1500));
+    // Generate real AI image via Pollinations AI in demo mode without key!
+    await new Promise((r) => setTimeout(r, 2000));
+    const randomSeed = Math.floor(Math.random() * 999999);
+    const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${randomSeed}`;
     return {
-      url: `https://picsum.photos/seed/${encodeURIComponent(prompt)}/1024/1024`,
-      revised_prompt: `[Demo Mode - Add API Key for real DALL-E 3] ${prompt}`,
+      url: imageUrl,
+      revised_prompt: prompt,
+      isDemo: true,
     };
   }
 
@@ -149,5 +157,6 @@ export async function generateImage({ prompt, size = '1024x1024', style = 'vivid
   return {
     url: data.data[0]?.url,
     revised_prompt: data.data[0]?.revised_prompt || prompt,
+    isDemo: false,
   };
 }

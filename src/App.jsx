@@ -78,7 +78,7 @@ export default function App() {
 
     if (!chatId) {
       const newId = `c-${Date.now()}`;
-      const title = userContent.length > 25 ? userContent.slice(0, 25) + '...' : userContent;
+      const title = userContent.length > 25 ? userContent.slice(0, 25) + '...' : (options.attachedFiles?.[0]?.name || 'New Chat');
       const newChat = {
         id: newId,
         title: title,
@@ -88,18 +88,31 @@ export default function App() {
       setActiveChatId(newId);
       chatId = newId;
     } else {
-      // Update title if first message
       const chat = chats.find((c) => c.id === chatId);
       if (chat && chat.messages.length === 0) {
-        const title = userContent.length > 25 ? userContent.slice(0, 25) + '...' : userContent;
+        const title = userContent.length > 25 ? userContent.slice(0, 25) + '...' : (options.attachedFiles?.[0]?.name || 'New Chat');
         setChats((prev) => prev.map((c) => (c.id === chatId ? { ...c, title } : c)));
       }
     }
 
+    // Check if user is asking for an image generation
+    const lowerContent = (userContent || '').toLowerCase();
+    const isExplicitImageReq =
+      currentModel === 'dall-e-3' ||
+      lowerContent.includes('image lagbe') ||
+      lowerContent.includes('generate image') ||
+      lowerContent.includes('make an image') ||
+      lowerContent.includes('draw') ||
+      lowerContent.includes('ছবি বানিয়ে') ||
+      lowerContent.includes('ছবি তৈরি') ||
+      lowerContent.includes('ছবি আঁকো') ||
+      lowerContent.includes('ছবি দাও');
+
     const userMessage = {
       id: `m-${Date.now()}`,
       role: 'user',
-      content: userContent,
+      content: userContent || (options.attachedFiles?.length ? 'Attached image/file' : ''),
+      attachments: options.attachedFiles || [],
       thinkMode: options.thinkMode,
     };
 
@@ -107,7 +120,7 @@ export default function App() {
     const assistantMessage = {
       id: assistantMsgId,
       role: 'assistant',
-      content: currentModel === 'dall-e-3' ? '🎨 Generating DALL-E 3 image...' : '',
+      content: isExplicitImageReq ? '🎨 Generating AI image for you...' : '',
       thinkMode: options.thinkMode,
     };
 
@@ -121,9 +134,11 @@ export default function App() {
 
     setIsGenerating(true);
 
-    if (currentModel === 'dall-e-3') {
+    // If explicit image generation requested
+    if (isExplicitImageReq) {
       try {
-        const imgResult = await generateImage({ prompt: userContent });
+        const imgPrompt = userContent || 'A beautiful futuristic artwork';
+        const imgResult = await generateImage({ prompt: imgPrompt });
         setChats((prev) =>
           prev.map((c) =>
             c.id === chatId
@@ -133,7 +148,7 @@ export default function App() {
                     m.id === assistantMsgId
                       ? {
                           ...m,
-                          content: `Here is your generated image for: **"${userContent}"**`,
+                          content: `Here is your AI generated image:`,
                           imageUrl: imgResult.url,
                           imagePrompt: imgResult.revised_prompt,
                         }
@@ -164,19 +179,36 @@ export default function App() {
       return;
     }
 
-    // Text Stream generation (GPT-4o or GPT-4o-mini)
+    // Text Stream generation (GPT-4o or GPT-4o-mini with Vision support)
     abortControllerRef.current = new AbortController();
 
     const currentChat = chats.find((c) => c.id === chatId);
-    const prevMessages = (currentChat?.messages || []).map((m) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    const prevMessages = (currentChat?.messages || []).map((m) => {
+      if (m.attachments && m.attachments.some((a) => a.type === 'image')) {
+        const images = m.attachments.filter((a) => a.type === 'image');
+        return {
+          role: m.role,
+          content: [
+            { type: 'text', text: m.content || '' },
+            ...images.map((img) => ({ type: 'image_url', image_url: { url: img.url } })),
+          ],
+        };
+      }
+      return { role: m.role, content: m.content || '' };
+    });
 
-    const apiMessages = [
-      ...prevMessages,
-      { role: 'user', content: userContent },
-    ];
+    let currentMsgContent = userContent || '';
+    if (options.attachedFiles && options.attachedFiles.length > 0) {
+      const imageFiles = options.attachedFiles.filter((f) => f.type === 'image');
+      if (imageFiles.length > 0) {
+        currentMsgContent = [
+          { type: 'text', text: userContent || 'Describe this image' },
+          ...imageFiles.map((img) => ({ type: 'image_url', image_url: { url: img.url } })),
+        ];
+      }
+    }
+
+    const apiMessages = [...prevMessages, { role: 'user', content: currentMsgContent }];
 
     await generateTextStream({
       messages: apiMessages,
@@ -219,6 +251,11 @@ export default function App() {
     });
   };
 
+  const handleTriggerDallE = (prompt) => {
+    setCurrentModel('dall-e-3');
+    handleSendMessage(prompt || 'Generate a creative image');
+  };
+
   const handleStopGeneration = () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -253,7 +290,11 @@ export default function App() {
         {activeChat && activeChat.messages.length > 0 ? (
           <div className="messages-container">
             {activeChat.messages.map((msg) => (
-              <ChatMessage key={msg.id} message={msg} />
+              <ChatMessage
+                key={msg.id}
+                message={msg}
+                onGenerateImageClick={handleTriggerDallE}
+              />
             ))}
             <div ref={messagesEndRef} />
           </div>
