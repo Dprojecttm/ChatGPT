@@ -95,18 +95,16 @@ export default function App() {
       }
     }
 
-    // Check if user is asking for an image generation
+    // Check if user is asking for an image generation (English, Banglish, Bangla keywords)
     const lowerContent = (userContent || '').toLowerCase();
+    const imageKeywords = [
+      'image', 'picture', 'photo', 'draw', 'illustration', 'banner', 'logo',
+      'poster', 'artwork', 'painting', 'graphic', 'thumbnail', 'wallpaper',
+      'ছবি', 'ইমেজ', 'পিকচার', 'আঁকো', 'বানিয়ে দাও', 'তৈরি করো'
+    ];
     const isExplicitImageReq =
       currentModel === 'dall-e-3' ||
-      lowerContent.includes('image lagbe') ||
-      lowerContent.includes('generate image') ||
-      lowerContent.includes('make an image') ||
-      lowerContent.includes('draw') ||
-      lowerContent.includes('ছবি বানিয়ে') ||
-      lowerContent.includes('ছবি তৈরি') ||
-      lowerContent.includes('ছবি আঁকো') ||
-      lowerContent.includes('ছবি দাও');
+      imageKeywords.some((kw) => lowerContent.includes(kw));
 
     const userMessage = {
       id: `m-${Date.now()}`,
