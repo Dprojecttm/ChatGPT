@@ -155,7 +155,6 @@ export async function generateImage({ prompt, size = '1024x1024', style = 'vivid
       prompt: prompt,
       n: 1,
       size: size,
-      style: style,
     }),
   });
 
