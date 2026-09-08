@@ -43,9 +43,24 @@ export default function Header({
               outline: 'none',
             }}
           >
-            <option value="gpt-4o">GPT-4o (Smartest)</option>
-            <option value="gpt-4o-mini">GPT-4o-mini (Fast & Light)</option>
-            <option value="dall-e-3">🎨 DALL-E 3 (Image Generator)</option>
+            <optgroup label="OpenAI Flagship">
+              <option value="gpt-4o">✨ GPT-4o (Omni - Smartest)</option>
+              <option value="gpt-4o-mini">⚡ GPT-4o-mini (Fast & Light)</option>
+              <option value="gpt-4-turbo">🔮 GPT-4 Turbo</option>
+            </optgroup>
+            <optgroup label="Reasoning Models">
+              <option value="o1">🧠 o1 (Advanced Reasoning)</option>
+              <option value="o1-mini">⚡ o1-mini (Fast Reasoning)</option>
+              <option value="o3-mini">🚀 o3-mini (Next-Gen Reasoning)</option>
+              <option value="deepseek-r1">🐋 DeepSeek-R1 (Reasoning)</option>
+            </optgroup>
+            <optgroup label="Other Popular AI">
+              <option value="claude-3-5-sonnet">🎭 Claude 3.5 Sonnet</option>
+              <option value="gpt-3.5-turbo">💬 GPT-3.5 Turbo</option>
+            </optgroup>
+            <optgroup label="Image Generation">
+              <option value="dall-e-3">🎨 DALL-E 3 (Image Generator)</option>
+            </optgroup>
           </select>
         </div>
 
